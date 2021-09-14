@@ -17,6 +17,14 @@ var ImageCrop = require('ti.imagecrop').createImageCrop({
 ```
 before you call the methods.
 
+and add
+```
+repositories {
+	maven { url 'https://jitpack.io' }
+}
+```
+to your `/app/platform/android/build.gradle`
+
 ### `showCropDialog`
 
 #### Parameters
