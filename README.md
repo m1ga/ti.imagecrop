@@ -29,7 +29,7 @@ to your `/app/platform/android/build.gradle`
 
 #### Parameters
 
-- `image` (String) - if empty it will show an image picker
+- `image` (String) - path to file; if empty it will show an image picker
 
 
 ## Events:
@@ -66,7 +66,7 @@ win.add(btn2);
 btn.addEventListener("click", function() {
 	Ti.Media.openPhotoGallery({
 		success: function(e) {
-            // crop image
+			// crop image
 			ImageCrop.showCropDialog({
 				image: e.media.nativePath
 			})
