@@ -38,6 +38,7 @@ import org.appcelerator.titanium.TiApplication;
 import org.appcelerator.titanium.TiBlob;
 import org.appcelerator.titanium.proxy.TiViewProxy;
 import org.appcelerator.titanium.view.TiUIView;
+import org.appcelerator.kroll.common.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -83,8 +84,12 @@ public class ImageCropProxy extends TiViewProxy
 			String url = getPathToApplicationAsset(options.getString("image"));
 			cropimage.launch(Uri.parse(url));
 		} else {
-			CropImageContractOptions cropImageContractOptions = new CropImageContractOptions(null, new CropImageOptions());
-			imagepicker.launch(cropImageContractOptions);
+			if (imagepicker != null) {
+				CropImageContractOptions cropImageContractOptions = new CropImageContractOptions(null, new CropImageOptions());
+				imagepicker.launch(cropImageContractOptions);
+			} else {
+				Log.w(LCAT, "Imagepicker not initialized yet.");
+			}
 		}
 
 	}
