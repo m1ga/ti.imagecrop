@@ -82,7 +82,11 @@ public class ImageCropProxy extends TiViewProxy
 	{
 		if (options.getString("image") != null && !options.getString("image").equals("")) {
 			String url = getPathToApplicationAsset(options.getString("image"));
-			cropimage.launch(Uri.parse(url));
+			if (cropimage != null) {
+				cropimage.launch(Uri.parse(url));
+			} else {
+				Log.w(LCAT, "Imagepicker not initialized yet.");
+			}
 		} else {
 			if (imagepicker != null) {
 				CropImageContractOptions cropImageContractOptions = new CropImageContractOptions(null, new CropImageOptions());
@@ -172,7 +176,5 @@ public class ImageCropProxy extends TiViewProxy
 
 			}
 		});
-
-
 	}
 }
