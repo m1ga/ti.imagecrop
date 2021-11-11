@@ -4,7 +4,6 @@
  * Copyright (c) 2009-2017 by Appcelerator, Inc. All Rights Reserved.
  * Licensed under the terms of the Apache Public License
  * Please see the LICENSE included with this distribution for details.
- *
  */
 package ti.imagecrop;
 
@@ -30,151 +29,176 @@ import com.canhub.cropper.CropImageContractOptions;
 import com.canhub.cropper.CropImageOptions;
 import com.canhub.cropper.CropImageView;
 import com.canhub.cropper.PickImageContract;
+import com.canhub.cropper.PickImageContractOptions;
 
 import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.annotations.Kroll;
+import org.appcelerator.kroll.common.Log;
 import org.appcelerator.kroll.common.TiConfig;
 import org.appcelerator.titanium.TiApplication;
 import org.appcelerator.titanium.TiBlob;
 import org.appcelerator.titanium.proxy.TiViewProxy;
 import org.appcelerator.titanium.view.TiUIView;
-import org.appcelerator.kroll.common.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
 
 
-@Kroll.proxy(creatableInModule=TiImagecropModule.class)
-public class ImageCropProxy extends TiViewProxy
-{
-	// Standard Debugging variables
-	private static final String LCAT = "ImageCropProxy";
-	private static final boolean DBG = TiConfig.LOGD;
-	private static ActivityResultLauncher<CropImageContractOptions> imagepicker;
-	private static ActivityResultLauncher<Uri> cropimage;
+@Kroll.proxy(creatableInModule = TiImagecropModule.class)
+public class ImageCropProxy extends TiViewProxy {
+    // Standard Debugging variables
+    private static final String LCAT = "ImageCropProxy";
+    private static final boolean DBG = TiConfig.LOGD;
+    private static ActivityResultLauncher<CropImageContractOptions> imagepicker;
+    private static ActivityResultLauncher<Uri> cropimage;
+    private ComponentActivity componentActivity;
+    private Boolean showGallery = true;
+	private Boolean showCamera = true;
 
-	private String getPathToApplicationAsset(String assetName)
-	{
-		return resolveUrl(null, assetName);
-	}
+    // Constructor
+    public ImageCropProxy() {
+        super();
+    }
 
-	// Constructor
-	public ImageCropProxy()
-	{
-		super();
-	}
+    private String getPathToApplicationAsset(String assetName) {
+        return resolveUrl(null, assetName);
+    }
 
-	@Override
-	public TiUIView createView(Activity activity)
-	{
-		return null;
-	}
+    @Override
+    public TiUIView createView(Activity activity) {
+        return null;
+    }
 
-	@Override
-	public void handleCreationDict(KrollDict options)
-	{
-		super.handleCreationDict(options);
-	}
+    @Override
+    public void handleCreationDict(KrollDict options) {
 
-	// Methods
-	@Kroll.method
-	public void showCropDialog(KrollDict options)
-	{
-		if (options.getString("image") != null && !options.getString("image").equals("")) {
-			String url = getPathToApplicationAsset(options.getString("image"));
-			if (cropimage != null) {
-				cropimage.launch(Uri.parse(url));
-			} else {
-				Log.w(LCAT, "Imagepicker not initialized yet.");
-			}
-		} else {
-			if (imagepicker != null) {
-				CropImageContractOptions cropImageContractOptions = new CropImageContractOptions(null, new CropImageOptions());
-				imagepicker.launch(cropImageContractOptions);
-			} else {
-				Log.w(LCAT, "Imagepicker not initialized yet.");
-			}
+    	super.handleCreationDict(options);
+    	if (options.containsKeyAndNotNull("showGallery")) {
+			showGallery = options.getBoolean("showGallery");
 		}
+		if (options.containsKeyAndNotNull("showCamera")) {
+			showCamera = options.getBoolean("showCamera");
+		}
+    }
 
-	}
+    // Methods
+    @Kroll.method
+    public void showCropDialog(KrollDict options) {
+        if (options.getString("image") != null && !options.getString("image").equals("")) {
+            String url = getPathToApplicationAsset(options.getString("image"));
+            if (cropimage != null) {
+                cropimage.launch(Uri.parse(url));
 
-	@Override
-	public void onCreate(Activity activity, Bundle savedInstanceState) {
-		super.onCreate(activity, savedInstanceState);
-		ComponentActivity componentActivity = (ComponentActivity) TiApplication.getAppCurrentActivity();
+            } else {
+                Log.w(LCAT, "Imagepicker not initialized yet.");
+            }
+        } else {
+            if (imagepicker != null) {
+                CropImageContractOptions cropImageContractOptions = new CropImageContractOptions(null, new CropImageOptions());
+                imagepicker.launch(cropImageContractOptions);
+            } else {
+                Log.w(LCAT, "Imagepicker not initialized yet.");
+            }
+        }
 
-		//
-		// Image select
-		//
-		ActivityResultContract<CropImageContractOptions, CropImageView.CropResult> pickImageContract = new ActivityResultContract<CropImageContractOptions, CropImageView.CropResult>() {
-			@NonNull
-			@Override
-			public Intent createIntent(@NonNull Context context, CropImageContractOptions input) {
-				PickImageContract pickImageContract = new PickImageContract();
-				return pickImageContract.createIntent(TiApplication.getAppCurrentActivity(), true);
-			}
+    }
 
-			@Override
-			public CropImageView.CropResult parseResult(int resultCode, @Nullable Intent intent) {
-				if (intent != null && intent.getData() != null) {
-					cropimage.launch(intent.getData());
-				}
-				return null;
-			}
-		};
-		// image select result
-		imagepicker = componentActivity.registerForActivityResult(pickImageContract, result -> {});
+    @Override
+    public void onCreate(Activity activity, Bundle savedInstanceState) {
+        super.onCreate(activity, savedInstanceState);
+        componentActivity = (ComponentActivity) TiApplication.getAppCurrentActivity();
+        //
+        // Image select
+        //
+        ActivityResultContract<CropImageContractOptions, CropImageView.CropResult> pickImageContract = new ActivityResultContract<CropImageContractOptions, CropImageView.CropResult>() {
+            @NonNull
+            @Override
+            public Intent createIntent(@NonNull Context context, CropImageContractOptions input) {
+                PickImageContract pickImageContract = new PickImageContract();
+                PickImageContractOptions pickoptions = new PickImageContractOptions();
+                pickoptions.setIncludeCamera(showCamera);
+                pickoptions.setIncludeGallery(showGallery);
+                return pickImageContract.createIntent(TiApplication.getAppCurrentActivity(), pickoptions);
+            }
 
-		//
-		// Image crop
-		//
-		ActivityResultContract<Uri, CropImageView.CropResult> cropImageContract = new ActivityResultContract<Uri,  CropImageView.CropResult>() {
-			@NonNull
-			@Override
-			public Intent createIntent(@NonNull Context context, Uri input) {
-				CropImageContract cropImageContract = new CropImageContract();
-				CropImageContractOptions options = new CropImageContractOptions(input, new CropImageOptions());
-				options.setAllowFlipping(false);
-				return cropImageContract.createIntent(TiApplication.getAppCurrentActivity(), options);
-			}
+            @Override
+            public CropImageView.CropResult parseResult(int resultCode, @Nullable Intent intent) {
+                if (resultCode == 0) {
+                    fireEvent("cancel", new KrollDict());
+                }
 
-			@Override
-			public  CropImageView.CropResult parseResult(int resultCode, @Nullable Intent intent) {
-				if (intent != null) {
-					if (intent.getExtras() != null) {
-						return intent.getParcelableExtra(CropImage.CROP_IMAGE_EXTRA_RESULT);
-					}
-				}
-				return null;
-			}
-		};
+                if (intent != null && intent.getData() != null) {
+                    cropimage.launch(intent.getData());
+                }
+                return null;
+            }
 
-		// crop image result
-		cropimage = componentActivity.registerForActivityResult(cropImageContract, result -> {
-			if (result != null){
-				KrollDict kd = new KrollDict();
 
-				if (result.getOriginalUri() == null){
-					return;
-				}
-				try {
-					BitmapRegionDecoder decoder;
-					InputStream inputStream = TiApplication.getAppCurrentActivity().getContentResolver().openInputStream(result.getOriginalUri());
-					Rect rect = result.getCropRect();
+        };
+        // image select result
+        imagepicker = componentActivity.registerForActivityResult(pickImageContract, result -> {
+            if (result != null) {
 
-					decoder = BitmapRegionDecoder.newInstance(inputStream, false);
-					Bitmap region = decoder.decodeRegion(rect, null);
+            }
+        });
 
-					Matrix matrix = new Matrix();
-					matrix.postRotate(result.getRotation());
-					Bitmap rotatedBitmap = Bitmap.createBitmap(region, 0, 0, region.getWidth(), region.getHeight(), matrix, true);
-					kd.put("image", TiBlob.blobFromImage(rotatedBitmap));
-					fireEvent("done", kd);
-				} catch (IOException e) {
-					fireEvent("error", kd);
-				}
+        // --------------------------------------------------------------------------------------------
 
-			}
-		});
-	}
+        //
+        // Image crop
+        //
+        ActivityResultContract<Uri, CropImageView.CropResult> cropImageContract = new ActivityResultContract<Uri, CropImageView.CropResult>() {
+            @NonNull
+            @Override
+            public Intent createIntent(@NonNull Context context, Uri input) {
+                CropImageContract cropImageContract = new CropImageContract();
+                CropImageContractOptions options = new CropImageContractOptions(input, new CropImageOptions());
+                options.setAllowFlipping(false);
+                return cropImageContract.createIntent(TiApplication.getAppCurrentActivity(), options);
+            }
+
+            @Override
+            public CropImageView.CropResult parseResult(int resultCode, @Nullable Intent intent) {
+
+                if (resultCode == 0) {
+                    fireEvent("cancel", new KrollDict());
+                }
+
+                if (intent != null) {
+                    if (intent.getExtras() != null) {
+                        return intent.getParcelableExtra(CropImage.CROP_IMAGE_EXTRA_RESULT);
+                    }
+                }
+                return null;
+            }
+        };
+
+        // crop image result
+        cropimage = componentActivity.registerForActivityResult(cropImageContract, result -> {
+
+            if (result != null) {
+                KrollDict kd = new KrollDict();
+
+                if (result.getOriginalUri() == null) {
+                    return;
+                }
+                try {
+                    BitmapRegionDecoder decoder;
+                    InputStream inputStream = TiApplication.getAppCurrentActivity().getContentResolver().openInputStream(result.getOriginalUri());
+                    Rect rect = result.getCropRect();
+
+                    decoder = BitmapRegionDecoder.newInstance(inputStream, false);
+                    Bitmap region = decoder.decodeRegion(rect, null);
+
+                    Matrix matrix = new Matrix();
+                    matrix.postRotate(result.getRotation());
+                    Bitmap rotatedBitmap = Bitmap.createBitmap(region, 0, 0, region.getWidth(), region.getHeight(), matrix, true);
+                    kd.put("image", TiBlob.blobFromImage(rotatedBitmap));
+                    fireEvent("done", kd);
+                } catch (IOException e) {
+                    fireEvent("error", kd);
+                }
+            }
+        });
+    }
 }
