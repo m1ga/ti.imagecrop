@@ -17,6 +17,13 @@ var ImageCrop = require('ti.imagecrop').createImageCrop({
 ```
 before you call the methods.
 
+* createImageCrop
+ * Paremeter:
+	* lifecycleContainer
+	* showCamera: when `showCropDialog` - `image` is empty it will show/hide the camera option
+	* showGallery: when `showCropDialog` - `image` is empty it will show/hide the gallery option
+
+
 and add
 ```
 repositories {
@@ -25,17 +32,16 @@ repositories {
 ```
 to your `/app/platform/android/build.gradle`
 
-### `showCropDialog`
-
-#### Parameters
-
-- `image` (String) - path to file; if empty it will show an image picker
-
+* `showCropDialog`
+ * Parameters:
+ 	- `image` (String) - path to file; if empty it will show an image picker
 
 ## Events:
 
-### `done`
-- Parameter: `image` (TiBlob) - cropped image
+* `done`
+ - Parameter: `image` (TiBlob) - cropped image
+* `cancel`
+
 
 ## Example:
 
@@ -43,10 +49,15 @@ to your `/app/platform/android/build.gradle`
 var win = Ti.UI.createWindow();
 
 var ImageCrop = require('ti.imagecrop').createImageCrop({
-	lifecycleContainer: win
+	lifecycleContainer: win,
+	// showCamera: false,
+	// showGallery: false
 });
 ImageCrop.addEventListener("done", function(e) {
 	img.image = e.image;
+});
+ImageCrop.addEventListener("cancel", function(e) {
+	alert("cancel");
 });
 
 var img = Ti.UI.createImageView({
