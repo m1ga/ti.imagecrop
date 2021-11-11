@@ -6,25 +6,14 @@ Android image crop based on: https://github.com/CanHub/Android-Image-Cropper
 
 For the <b>iOS version</b> have a look at https://github.com/hansemannn/titanium-image-crop
 
-## Methods:
-
-### 📢 Attention:
+## 📢 Attention:
 You have to use a `lifecycleContainer` like this:
 ```javascript
 var ImageCrop = require('ti.imagecrop').createImageCrop({
 	lifecycleContainer: win
 });
 ```
-before you call the methods.
-
-* createImageCrop
- * Paremeter:
-	* lifecycleContainer
-	* showCamera: when `showCropDialog` - `image` is empty it will show/hide the camera option
-	* showGallery: when `showCropDialog` - `image` is empty it will show/hide the gallery option
-
-
-and add
+before you call the methods and add
 ```
 repositories {
 	maven { url 'https://jitpack.io' }
@@ -32,14 +21,25 @@ repositories {
 ```
 to your `/app/platform/android/build.gradle`
 
+## Methods:
+
+* `createImageCrop`
+	* Paremeter:
+		* lifecycleContainer
+		* showCamera: when `showCropDialog` - `image` is empty it will show/hide the camera option
+		* showGallery: when `showCropDialog` - `image` is empty it will show/hide the gallery option
+
+
+
+
 * `showCropDialog`
- * Parameters:
- 	- `image` (String) - path to file; if empty it will show an image picker
+	* Parameters:
+		- `image` (String) - path to file; if empty it will show an image picker
 
 ## Events:
 
 * `done`
- - Parameter: `image` (TiBlob) - cropped image
+	* Parameter: `image` (TiBlob) - cropped image
 * `cancel`
 
 
