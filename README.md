@@ -29,9 +29,6 @@ to your `/app/platform/android/build.gradle`
 		* showCamera: when `showCropDialog` - `image` is empty it will show/hide the camera option
 		* showGallery: when `showCropDialog` - `image` is empty it will show/hide the gallery option
 
-
-
-
 * `showCropDialog`
 	* Parameters:
 		- `image` (String) - path to file; if empty it will show an image picker
@@ -46,12 +43,23 @@ to your `/app/platform/android/build.gradle`
 ## Example:
 
 ```javascript
-var win = Ti.UI.createWindow();
+const win = Ti.UI.createWindow();
+const img = Ti.UI.createImageView({
+	top: 0
+});
+const btn = Ti.UI.createButton({
+	title: "crop image (Ti picker)",
+	bottom: 0
+});
+const btn2 = Ti.UI.createButton({
+	title: "select image (module picker)",
+	bottom: 50
+});
 
-var ImageCrop = require('ti.imagecrop').createImageCrop({
+const ImageCrop = require('ti.imagecrop').createImageCrop({
 	lifecycleContainer: win,
-	// showCamera: false,
-	// showGallery: false
+	showCamera: true,
+	showGallery: true
 });
 ImageCrop.addEventListener("done", function(e) {
 	img.image = e.image;
@@ -60,20 +68,8 @@ ImageCrop.addEventListener("cancel", function(e) {
 	alert("cancel");
 });
 
-var img = Ti.UI.createImageView({
-	top: 0
-});
-var btn = Ti.UI.createButton({
-	title: "crop image",
-	bottom: 0
-});
-var btn2 = Ti.UI.createButton({
-	title: "select image",
-	bottom: 50
-});
-win.add(img);
-win.add(btn);
-win.add(btn2);
+
+win.add([img, btn, btn2]);
 btn.addEventListener("click", function() {
 	Ti.Media.openPhotoGallery({
 		success: function(e) {
