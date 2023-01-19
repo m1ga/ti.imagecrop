@@ -10,12 +10,15 @@ package ti.imagecrop;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapRegionDecoder;
 import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
 
 import androidx.activity.ComponentActivity;
 import androidx.activity.result.ActivityResultLauncher;
@@ -36,10 +39,13 @@ import org.appcelerator.kroll.common.TiConfig;
 import org.appcelerator.titanium.TiApplication;
 import org.appcelerator.titanium.TiBlob;
 import org.appcelerator.titanium.proxy.TiViewProxy;
+import org.appcelerator.titanium.util.TiConvert;
 import org.appcelerator.titanium.view.TiUIView;
 
 import java.io.IOException;
 import java.io.InputStream;
+
+import ti.modules.titanium.filesystem.FileProxy;
 
 
 @Kroll.proxy(creatableInModule = TiImagecropModule.class)
@@ -51,6 +57,8 @@ public class ImageCropProxy extends TiViewProxy {
     private ComponentActivity componentActivity;
     private Boolean showGallery = false;
     private Boolean showCamera = false;
+    private CropImageView cropImageView;
+    TiUIView view;
 
     // Constructor
     public ImageCropProxy() {
@@ -63,7 +71,10 @@ public class ImageCropProxy extends TiViewProxy {
 
     @Override
     public TiUIView createView(Activity activity) {
-        return null;
+        view = new ImageCropView(this);
+        view.getLayoutParams().autoFillsHeight = true;
+        view.getLayoutParams().autoFillsWidth = true;
+        return view;
     }
 
     @Override
@@ -87,13 +98,13 @@ public class ImageCropProxy extends TiViewProxy {
             String url = getPathToApplicationAsset(options.getString("image"));
             imgUri = Uri.parse(url);
         }
-
         if (cropimage != null) {
             cropimage.launch(imgUri);
         } else {
             Log.w(LCAT, "Imagepicker not initialized yet.");
         }
     }
+
 
     @Override
     public void onCreate(Activity activity, Bundle savedInstanceState) {
@@ -110,17 +121,17 @@ public class ImageCropProxy extends TiViewProxy {
                 CropImageOptions cropImageOptions = new CropImageOptions();
                 cropImageOptions.imageSourceIncludeCamera = showCamera;
                 cropImageOptions.imageSourceIncludeGallery = showGallery;
+                cropImageOptions.allowFlipping = false;
                 CropImageContractOptions options = new CropImageContractOptions(input, cropImageOptions);
-                options.setAllowFlipping(false);
                 if (showCamera || showGallery) {
-                    options.setShowIntentChooser(true);
+                    cropImageOptions.showIntentChooser = true;
                 }
                 return cropImageContract.createIntent(TiApplication.getAppCurrentActivity(), options);
             }
 
+
             @Override
             public CropImageView.CropResult parseResult(int resultCode, @Nullable Intent intent) {
-
                 if (resultCode == 0) {
                     fireEvent("cancel", new KrollDict());
                 }
@@ -136,30 +147,94 @@ public class ImageCropProxy extends TiViewProxy {
 
         // crop image result
         cropimage = componentActivity.registerForActivityResult(cropImageContract, result -> {
-
             if (result != null) {
-                KrollDict kd = new KrollDict();
+                if (result.isSuccessful()) {
+                    KrollDict kd = new KrollDict();
 
-                if (result.getOriginalUri() == null) {
-                    return;
+                    if (result.getOriginalUri() == null) {
+                        return;
+                    }
+                    try {
+                        BitmapRegionDecoder decoder;
+                        InputStream inputStream = TiApplication.getAppCurrentActivity().getContentResolver().openInputStream(result.getOriginalUri());
+                        Rect rect = result.getCropRect();
+
+                        decoder = BitmapRegionDecoder.newInstance(inputStream, false);
+                        Bitmap region = decoder.decodeRegion(rect, null);
+
+                        Matrix matrix = new Matrix();
+                        matrix.postRotate(result.getRotation());
+                        Bitmap rotatedBitmap = Bitmap.createBitmap(region, 0, 0, region.getWidth(), region.getHeight(), matrix, true);
+                        kd.put("image", TiBlob.blobFromImage(rotatedBitmap));
+                        fireEvent("done", kd);
+                    } catch (IOException e) {
+                        fireEvent("error", kd);
+                    }
                 }
-                try {
-                    BitmapRegionDecoder decoder;
-                    InputStream inputStream = TiApplication.getAppCurrentActivity().getContentResolver().openInputStream(result.getOriginalUri());
-                    Rect rect = result.getCropRect();
-
-                    decoder = BitmapRegionDecoder.newInstance(inputStream, false);
-                    Bitmap region = decoder.decodeRegion(rect, null);
-
-                    Matrix matrix = new Matrix();
-                    matrix.postRotate(result.getRotation());
-                    Bitmap rotatedBitmap = Bitmap.createBitmap(region, 0, 0, region.getWidth(), region.getHeight(), matrix, true);
-                    kd.put("image", TiBlob.blobFromImage(rotatedBitmap));
-                    fireEvent("done", kd);
-                } catch (IOException e) {
-                    fireEvent("error", kd);
-                }
+            } else {
+                Log.e(LCAT, "Error ");
             }
         });
     }
+
+    @Kroll.method
+    public TiBlob cropImage() {
+       return getView().cropImage();
+    }
+
+    @Kroll.setProperty
+    public void setRotation(int value) {
+        getView().setRotation(value);
+    }
+
+    protected ImageCropView getView() {
+        return (ImageCropView) getOrCreateView();
+    }
+
+    private class ImageCropView extends TiUIView {
+        public ImageCropView(TiViewProxy proxy) {
+            super(proxy);
+
+            String pkgName = proxy.getActivity().getPackageName();
+            Resources res = proxy.getActivity().getResources();
+
+            int resId_viewHolder = res.getIdentifier("main", "layout", pkgName);
+            LayoutInflater inflater = LayoutInflater.from(proxy.getActivity());
+            View viewWrapper = inflater.inflate(resId_viewHolder, null);
+
+            int resId_view = res.getIdentifier("cropImageView", "id", pkgName);
+            cropImageView = viewWrapper.findViewById(resId_view);
+
+            // attach the view
+            setNativeView(viewWrapper);
+        }
+
+        public TiBlob cropImage() {
+            Bitmap bmp = cropImageView.getCroppedImage();
+            return TiBlob.blobFromImage(bmp);
+        }
+
+        public void setRotation(int value) {
+            cropImageView.setRotatedDegrees(value);
+        }
+
+        @Override
+        public void processProperties(KrollDict d) {
+            super.processProperties(d);
+            if (d.containsKey("blob")) {
+                TiBlob tiBlob = TiConvert.toBlob(d.get("blob"));
+                if (tiBlob != null) {
+                    cropImageView.setImageBitmap(tiBlob.getImage());
+                }
+            }
+            if (d.containsKey("file")) {
+                FileProxy fileProxy = (FileProxy) d.get("file");
+                if (fileProxy != null) {
+                    cropImageView.setImageUriAsync(Uri.parse(fileProxy.getNativePath()));
+                }
+            }
+
+        }
+    }
 }
+
